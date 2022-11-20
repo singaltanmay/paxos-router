@@ -12,4 +12,7 @@ public class Application {
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }
+
+    public enum PAXOS_ROLES {PROPOSER, ACCEPTOR, LEARNER}
+
 }
