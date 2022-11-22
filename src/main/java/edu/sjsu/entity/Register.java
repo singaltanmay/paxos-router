@@ -11,14 +11,17 @@ import lombok.ToString;
 @ToString
 public class Register {
 
-    @Getter
-    Application.PAXOS_ROLES role;
+  @Getter
+  Application.PAXOS_ROLES role;
 
-    public Register(Application.PAXOS_ROLES role) {
-        this.role = role;
-    }
+  @Getter
+  String uuid;
 
-    public Register() {
-        role = Application.PAXOS_ROLES.PROPOSER;
-    }
+  public Register(Application.PAXOS_ROLES role) {
+    this.role = role;
+  }
+
+  public Register() {
+    role = Application.PAXOS_ROLES.PROPOSER;
+  }
 }
