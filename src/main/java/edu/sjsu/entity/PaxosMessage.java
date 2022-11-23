@@ -5,10 +5,12 @@
 package edu.sjsu.entity;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
 @ToString
+@NoArgsConstructor
 public class PaxosMessage {
 
   @Getter
@@ -42,10 +44,10 @@ public class PaxosMessage {
     this.value = value;
   }
 
-  public enum PAXOS_MESSAGE_TYPE {PROMISE, PROPOSAL}
-
   public PaxosMessage(PAXOS_MESSAGE_TYPE messageType, String value) {
     this.messageType = messageType;
     this.value = value;
   }
+
+  public enum PAXOS_MESSAGE_TYPE {PROMISE, ACCEPT_REQUEST, ACCEPT, PROPOSAL}
 }

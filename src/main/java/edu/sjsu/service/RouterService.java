@@ -35,14 +35,20 @@ public class RouterService {
     });
   }
 
-  public void broadcastToProposers(List<RoleDescriptor> proposers, PaxosMessage message) {
-    for (RoleDescriptor proposer : proposers) {
-      String uri = proposer.getUri();
+  public void broadcast(List<RoleDescriptor> nodes, PaxosMessage message) {
+    if (nodes == null) {
+      return;
+    }
+    for (RoleDescriptor node : nodes) {
+      String uri = node.getUri();
       sendMessageToUri(message, uri);
     }
   }
 
-  public void sendToProposer(PaxosMessage message, RoleDescriptor destination) {
+  public void sendToDestination(PaxosMessage message, RoleDescriptor destination) {
+    if (destination == null) {
+      return;
+    }
     final String uri = destination.getUri();
     sendMessageToUri(message, uri);
   }
