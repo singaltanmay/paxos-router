@@ -67,6 +67,7 @@ public class RouterController {
   @PostMapping("message")
   public ResponseEntity<Void> incoming(@RequestBody PaxosMessage message) {
     final PAXOS_MESSAGE_TYPE messageType = message.getMessageType();
+    message.setPaxosRoleCounts(roleRegistry);
     System.out.println("Incoming " + messageType + " message " + message);
     switch (messageType) {
       case PROPOSAL -> {
