@@ -15,10 +15,12 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +36,7 @@ public class RouterController {
   private static final Logger LOGGER = LogManager.getLogger(RouterController.class);
   private final RouterService routerService;
   Map<Application.PAXOS_ROLES, List<RoleDescriptor>> roleRegistry = new HashMap<>();
+  Map<String, Pair<String, Integer>> latencies = new HashMap<>();
   Map<String, RoleDescriptor> uuidRegistry = new HashMap<>();
 
   @Autowired
@@ -44,7 +47,7 @@ public class RouterController {
   @PostMapping("register")
 
   public ResponseEntity<String> register(HttpServletRequest request, @RequestBody Register register) {
-    System.out.println("Incoming registration " + register);
+    LOGGER.info("Incoming registration " + register);
     // Add registering entity to role list in roles map
     Application.PAXOS_ROLES role = register.getRole();
     final String uuid = register.getUuid();
@@ -65,10 +68,20 @@ public class RouterController {
   }
 
   @PostMapping("message")
-  public ResponseEntity<Void> incoming(@RequestBody PaxosMessage message) {
+  public ResponseEntity<Void> incoming(@RequestBody PaxosMessage message) throws InterruptedException {
+    // Add latency if configured
+    final String messageSource = message.getMessageSource();
+    final String messageDestination = message.getMessageDestination();
+    if (latencies.containsKey(messageSource)) {
+      final Pair<String, Integer> latencyPair = latencies.get(messageSource);
+      final boolean isLatencyConfigured = latencyPair.getFirst().equals(messageDestination);
+      final long millis = 1000L * (isLatencyConfigured ? latencyPair.getSecond() : 0);
+      LOGGER.info("Sleeping for " + millis + " as per latency configured between " + messageSource + " and " + messageDestination);
+      Thread.sleep(millis);
+    }
     final PAXOS_MESSAGE_TYPE messageType = message.getMessageType();
     message.setPaxosRoleCounts(roleRegistry);
-    System.out.println("Incoming " + messageType + " message " + message);
+    LOGGER.info("Incoming " + messageType + " message " + message);
     switch (messageType) {
       case PROPOSAL -> {
         // A proposal needs to be broadcast to all acceptors
@@ -78,7 +91,7 @@ public class RouterController {
       }
       case PROMISE -> { // send promise to proposer
         LOGGER.info("Sending PROMISE message to original PROPOSER");
-        String destination = message.getMessageDestination();
+        String destination = messageDestination;
         final RoleDescriptor descriptor = uuidRegistry.get(destination);
         routerService.sendToDestination(message, descriptor);
       }
@@ -89,7 +102,7 @@ public class RouterController {
       }
       case ACCEPT -> {
         LOGGER.info("Sending ACCEPT message to original PROPOSER");
-        String destination = message.getMessageDestination();
+        String destination = messageDestination;
         final RoleDescriptor descriptor = uuidRegistry.get(destination);
         routerService.sendToDestination(message, descriptor);
         LOGGER.info("Broadcasting ACCEPT message to all LEARNERS");
@@ -103,6 +116,22 @@ public class RouterController {
   @GetMapping("debug/uuidregistry")
   public ResponseEntity<Map<String, RoleDescriptor>> getUUIDRegistry() {
     return new ResponseEntity<>(uuidRegistry, HttpStatus.OK);
+  }
+
+  @PostMapping("latency")
+  public ResponseEntity<Void> addLatency(String source, String destination, int latency) {
+    if (!uuidRegistry.containsKey(source) || !uuidRegistry.containsKey(destination) || latency < 0) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    }
+    latencies.put(source, Pair.of(destination, latency));
+    return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("learned")
+  public ResponseEntity<List<String>> getLearnedValues() throws InterruptedException {
+    final List<RoleDescriptor> learners = roleRegistry.get(PAXOS_ROLES.LEARNER);
+    Optional<List<String>> values = routerService.getLearnedValues(learners);
+    return ResponseEntity.of(values);
   }
 
 }
