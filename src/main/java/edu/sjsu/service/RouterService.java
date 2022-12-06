@@ -73,8 +73,15 @@ public class RouterService {
           final Response<ResponseBody> execute = call.execute();
           if (execute.isSuccessful()) {
             if (execute.body() != null) {
+//              final String string = execute.body().string();
+//              final String[] split = string.split("\"");
+//              if (split.length > 4) {
+//                values.add(split[3]);
+//              }
               final String string = execute.body().string();
-              values.add(string.split("\"")[3]);
+              if (!string.isBlank()) {
+                values.add(string);
+              }
             }
           } else {
             LOGGER.error("Failed to get learned value from " + learner.getUuid());
@@ -85,5 +92,24 @@ public class RouterService {
       }
     }
     return Optional.of(values);
+  }
+
+  public void initiateProposal(String value, RoleDescriptor proposer) {
+
+    final Retrofit retrofit = RetrofitClient.getRetrofitInstance(proposer.getUri());
+    final Api api = retrofit.create(Api.class);
+    final Call<Void> call = api.initiateProposal(value);
+    call.enqueue(new Callback<Void>() {
+      @Override
+      public void onResponse(Call<Void> call, Response<Void> response) {
+        LOGGER.info("Successfully initiated proposal for value " + value);
+      }
+
+      @Override
+      public void onFailure(Call<Void> call, Throwable throwable) {
+        LOGGER.error("Failed to initiate proposal for value " + value);
+      }
+    });
+
   }
 }

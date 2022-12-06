@@ -134,4 +134,14 @@ public class RouterController {
     return ResponseEntity.of(values);
   }
 
+  @PostMapping("proposal/initiate")
+  public ResponseEntity<Void> initiateProposal(String value, String proposerID) {
+    final RoleDescriptor proposerDescriptor = uuidRegistry.get(proposerID);
+    if (proposerDescriptor == null) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    }
+    routerService.initiateProposal(value, proposerDescriptor);
+    return ResponseEntity.ok().build();
+  }
+
 }
