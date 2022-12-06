@@ -8,9 +8,11 @@ import edu.sjsu.api.Api;
 import edu.sjsu.api.RetrofitClient;
 import edu.sjsu.entity.PaxosMessage;
 import edu.sjsu.entity.RoleDescriptor;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import okhttp3.ResponseBody;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
@@ -61,30 +63,26 @@ public class RouterService {
 
   public Optional<List<String>> getLearnedValues(List<RoleDescriptor> learners) throws InterruptedException {
     final List<String> values = new LinkedList<>();
-    final int[] callsQueued = {0};
     if (learners != null && !learners.isEmpty()) {
       for (final RoleDescriptor learner : learners) {
         final Retrofit retrofit = RetrofitClient.getRetrofitInstance(learner.getUri());
         final Api api = retrofit.create(Api.class);
-        final Call<String> call = api.getLearnerValue();
-        callsQueued[0]++;
-        call.enqueue(new Callback<>() {
-          @Override
-          public void onResponse(Call<String> call, Response<String> response) {
-            values.add(response.body());
-            callsQueued[0]--;
-          }
+        final Call<ResponseBody> call = api.getLearnerValue();
 
-          @Override
-          public void onFailure(Call<String> call, Throwable throwable) {
+        try {
+          final Response<ResponseBody> execute = call.execute();
+          if (execute.isSuccessful()) {
+            if (execute.body() != null) {
+              final String string = execute.body().string();
+              values.add(string.split("\"")[3]);
+            }
+          } else {
             LOGGER.error("Failed to get learned value from " + learner.getUuid());
-            callsQueued[0]--;
           }
-        });
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
-    }
-    while (callsQueued[0] > 0) {
-      Thread.sleep(500);
     }
     return Optional.of(values);
   }

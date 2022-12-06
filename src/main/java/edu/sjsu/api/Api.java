@@ -5,6 +5,8 @@
 package edu.sjsu.api;
 
 import edu.sjsu.entity.PaxosMessage;
+import okhttp3.ResponseBody;
+import org.springframework.data.util.Pair;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
@@ -16,6 +18,6 @@ public interface Api {
     Call<Void> sendMessage(@Body PaxosMessage message);
 
     @GET("value")
-    Call<String> getLearnerValue();
+    Call<ResponseBody> getLearnerValue();
 
 }
